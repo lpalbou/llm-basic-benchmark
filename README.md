@@ -177,9 +177,9 @@ I extend my gratitude to all the organizations and researchers who have made the
 - **Apple** - For the M4 Max chip and unified memory architecture that enabled testing of large models locally
 
 ### Analysis and Documentation
-- **Claude 4 Sonnet** - For invaluable assistance in analyzing benchmark results, identifying data inconsistencies, and helping to structure comprehensive documentation
+- The open source AI community's collaborative spirit makes research like this possible. These benchmarks aim to contribute back to the community by providing practical performance insights.
 
-The open source AI community's collaborative spirit makes research like this possible. These benchmarks aim to contribute back to the community by providing practical performance insights.
+- Claude 4 Sonnet, for its valuable assistance in analyzing benchmark results, identifying data inconsistencies, and helping to structure comprehensive documentation
 
 ## License
 
