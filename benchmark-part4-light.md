@@ -3717,9 +3717,7 @@ eval rate:            21.79 tokens/s
 ## Opus 4
 Failed on both iterations (!). Opus even failed several times during the generation (on claude.ai) and had to resubmit the requests. Prior to that, I also got messages that *"Due to unexpected capacity constraints, Claude is unable to respond to your message. Please try again."*.
 
-I was surprised, so i did another test (opus4b.py) and the result is good with actual physics, but the ball is falling outside the triangle at some point. The problem however is that many Anthropic models seems to be a hit or miss. There are theories over the web, that depending of the time of the day (so the usage of servers), the responses might be suboptimal. It is now late when i try again, and this might explain ?
-
-When trying with opus4b thinking, i got a partial class that is not executable (opus4-thinking.py). The second version was crashing (opus4-thinking-v2.py). When prompted back with the error, the 3rd iteration was good with physics (opus4-thinking-v3.py), but the ball also fell out of the triangle.
+I was surprised, so i did another test (opus4b.py) and the result is good with actual physics, but the ball is falling outside the triangle at some point. The problem however is that many Anthropic models seems to be a hit or miss. There are theories over the web, that depending of the time of the day (so the usage of servers), the responses might be suboptimal. 
 
 
 ## Winners
