@@ -164,7 +164,7 @@ I extend my gratitude to all the organizations and researchers who have made the
 - **IBM** (Granite series)
 - **Mistral AI** (Mistral, Codestral, Devstral)
 - **DeepSeek** (DeepSeek-R1 series)
-- **Rhymes AI** (Cogito series)
+- **DeepCogito** (Cogito series)
 - **And all other contributors** to the open source LLM ecosystem
 
 ### Infrastructure and Tools
