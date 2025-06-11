@@ -1716,6 +1716,92 @@ Given ¬W → D
 *(Also interrupted)*
 
 
+### ollama run deepseek-r1:70b-llama-distill-q4_K_M --verbose
+>>> If I hadn’t watered the plant yesterday, it would have died. The plant is alive today. Can we conclude I watered it yesterday? Why or why not?
+Thinking...
+Okay, so I'm trying to figure out whether I can conclude that I watered the plant yesterday based on the given statements. Let me break this down step by step.
+
+First, the problem states: "If I hadn’t watered the plant yesterday, it would have died." Then it says, "The plant is alive today. Can we conclude I watered it yesterday? Why or why not?"
+
+Alright, so let's parse this out. The first part is a conditional statement: If not watering (¬W), then the plant dies (¬A). So in logical terms, that would be ¬W → ¬A.
+
+The second statement tells us that the plant is alive today, which means A is true because A stands for the plant being alive.
+
+Now, I remember from logic that if we have a conditional statement P → Q, and we know that Q is false, then we can conclude that P must be false. This is called modus tollens. But in this case, our 
+conditional is ¬W → ¬A, and we're given A (the plant is alive). So I think I need to see if this fits into modus ponens or modus tollens.
+
+Wait, actually, modus tollens would be if we have P → Q and ¬Q, then ¬P. But here, our antecedent is ¬W, so it's a bit different. Let me write down the statements:
+
+1. If I hadn’t watered (¬W), then the plant died (¬A). So, ¬W → ¬A.
+
+2. The plant is alive today: A.
+
+We want to know if we can conclude W (I watered it).
+
+So from logic, if we have ¬W → ¬A and we have A, does that lead us to conclude W?
+
+Let me recall contrapositive. The contrapositive of a conditional P → Q is ¬Q → ¬P, which is logically equivalent.
+
+In our case, the contrapositive would be: If the plant did not die (A), then I watered it (W). So A → W.
+
+Wait, that seems to fit because if the original statement is ¬W → ¬A, its contrapositive should be A → W. Yes, because contrapositive swaps and negates both parts.
+
+So, given that, since we have A (the plant is alive), then according to the contrapositive, it must follow that W (I watered it). Therefore, yes, we can conclude I watered it yesterday.
+
+But let me double-check. Let's say I didn't water it (¬W). According to the first statement, ¬W → ¬A. So if I didn't water it, the plant would have died (¬A). But in reality, A is true—the plant is alive. 
+Therefore, ¬W must be false because if ¬W were true, then ¬A would also have to be true, but we know A is true. So ¬W leads to a contradiction with A being true. Thus, W must be true.
+
+Yes, that makes sense. Using modus tollens on the contrapositive. Alternatively, using the law of excluded middle: either I watered it or not. If I didn't, it's dead; since it's alive, I must have watered 
+it.
+
+Another angle: think about truth tables. Let's see:
+
+¬W → ¬A is equivalent to A → W because they are contrapositives and logically equivalent.
+
+So if we know that A is true, then from A → W, by modus ponens, W must be true. Therefore, I watered it.
+
+Wait a minute—am I mixing up the contrapositive correctly? Let me clarify:
+
+Original: ¬W → ¬A
+
+Contrapositive: A → W (since contrapositive is ¬(¬A) → ¬(¬W), which simplifies to A → W)
+
+Yes, that's correct. So given A, we can conclude W.
+
+Therefore, yes, we can conclude I watered it yesterday.
+...done thinking.
+
+Yes, we can conclude that you watered the plant yesterday.
+
+**Step-by-Step Explanation:**
+
+1. **Understanding the Conditional Statement:**
+   - The statement "If I hadn’t watered the plant yesterday, it would have died" can be written logically as ¬W → ¬A, where:
+     - ¬W = I did not water the plant.
+     - ¬A = The plant is dead.
+
+2. **Identifying the Contrapositive:**
+   - The contrapositive of a conditional statement P → Q is ¬Q → ¬P, which is logically equivalent to the original statement.
+   - Applying this to our statement: The contrapositive of ¬W → ¬A is A → W (If the plant is alive, then I watered it).
+
+3. **Applying Modus Ponens:**
+   - We are given that the plant is alive today (A).
+   - Using modus ponens on the contrapositive (A → W), we conclude that W must be true.
+
+4. **Conclusion:**
+   - Since the plant is alive, it logically follows that you watered it yesterday.
+
+**Answer:** Yes, we can conclude that I watered the plant yesterday because the contrapositive of the given conditional statement allows us to infer this from the fact that the plant is alive today.
+
+total duration:       2m35.828589292s
+load duration:        22.395667ms
+prompt eval count:    38 token(s)
+prompt eval duration: 1.486791417s
+prompt eval rate:     25.56 tokens/s
+eval count:           1115 token(s)
+eval duration:        2m34.318834667s
+eval rate:            7.23 tokens/s
+
 
 ### ollama run phi4-mini:3.8b --verbose
 ```
