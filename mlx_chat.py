@@ -75,6 +75,7 @@ class ModelConfig:
     """Configuration for the MLX model"""
     
     model_name: str = "mlx-community/Qwen3-30B-A3B-4bit"
+    adapter_path: Optional[str] = None  # Path to fine-tuned adapters
     max_tokens: int = 12288  # 12k output
     max_kv_size: int = 16384  # 16k context
     temperature: float = 0.7
@@ -88,6 +89,7 @@ class ModelConfig:
         """Create configuration from command line arguments"""
         return cls(
             model_name=args.model,
+            adapter_path=getattr(args, 'adapter_path', None),
             max_tokens=args.max_tokens,
             max_kv_size=args.max_kv_size,
             temperature=args.temperature,
@@ -126,6 +128,14 @@ class MLXModel:
         """Load the MLX model and tokenizer"""
         print(f"Loading model: {self.config.model_name}")
         
+        if self.config.adapter_path:
+            print(f"Loading with fine-tuned adapters: {self.config.adapter_path}")
+            # Validate adapter path exists
+            if not os.path.exists(self.config.adapter_path):
+                raise FileNotFoundError(f"Adapter path not found: {self.config.adapter_path}")
+            if not os.path.isdir(self.config.adapter_path):
+                raise ValueError(f"Adapter path is not a directory: {self.config.adapter_path}")
+        
         # Check if model is cached
         is_cached = check_model_cached(self.config.model_name)
         if is_cached:
@@ -137,18 +147,34 @@ class MLXModel:
         load_start = time.time()
         
         try:
-            # Load model with proper tokenizer config for Qwen
-            self.model, self.tokenizer = load(
-                self.config.model_name,
-                tokenizer_config={
-                    "eos_token": "<|endoftext|>",
-                    "trust_remote_code": True
-                }
-            )
+            # Load model with or without adapters
+            if self.config.adapter_path:
+                # Load with fine-tuned adapters
+                self.model, self.tokenizer = load(
+                    self.config.model_name,
+                    adapter_path=self.config.adapter_path,
+                    tokenizer_config={
+                        "eos_token": "<|endoftext|>",
+                        "trust_remote_code": True
+                    }
+                )
+                print(f"Fine-tuned model loaded with adapters!")
+            else:
+                # Load base model with proper tokenizer config for Qwen
+                self.model, self.tokenizer = load(
+                    self.config.model_name,
+                    tokenizer_config={
+                        "eos_token": "<|endoftext|>",
+                        "trust_remote_code": True
+                    }
+                )
+            
             self.load_duration = time.time() - load_start
             
             print(f"Model loaded successfully! (took {self.load_duration:.2f}s)")
             print(f"Max output: {self.config.max_tokens} tokens")
+            if self.config.adapter_path:
+                print(f"Using fine-tuned adapters from: {self.config.adapter_path}")
             print(f"Note: Advanced parameters (temperature, top_p) not yet implemented")
             print()
         except Exception as e:
@@ -309,7 +335,7 @@ class ChatInterface:
     def display_welcome(self) -> None:
         """Display welcome message"""
         print("=" * 60)
-        print("MLX Chat - Qwen3 Model Interface")
+        print("MLX Chat - Large Language Model Interface")
         print("=" * 60)
         print("Type 'help' for commands, 'quit' to exit")
         print()
@@ -339,6 +365,8 @@ class ChatInterface:
             return True
         elif command == "info":
             print(f"\nModel: {self.model_wrapper.config.model_name}")
+            if self.model_wrapper.config.adapter_path:
+                print(f"Adapters: {self.model_wrapper.config.adapter_path}")
             print(f"Max output: {self.model_wrapper.config.max_tokens} tokens")
             print(f"Temperature: {self.model_wrapper.config.temperature} (not yet implemented)")
             print(f"Top-p: {self.model_wrapper.config.top_p} (not yet implemented)")
@@ -434,6 +462,13 @@ def parse_arguments() -> argparse.Namespace:
         type=str,
         default="mlx-community/Qwen3-30B-A3B-4bit",
         help="Model to use (e.g., mlx-community/Qwen3-235B-A22B-3bit)"
+    )
+    
+    parser.add_argument(
+        "--adapter-path",
+        type=str,
+        default=None,
+        help="Path to fine-tuned adapter directory (e.g., ./dlora_moderate_adapters)"
     )
     
     parser.add_argument(
