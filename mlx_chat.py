@@ -8,6 +8,9 @@ Supports model selection, configurable context size, and interactive conversatio
 
 import argparse
 import sys
+import time
+import os
+from pathlib import Path
 from typing import List, Dict, Optional, Tuple
 from dataclasses import dataclass
 
@@ -16,6 +19,55 @@ try:
 except ImportError:
     print("Error: mlx-lm is not installed. Please install it with: pip install mlx-lm")
     sys.exit(1)
+
+
+@dataclass
+class GenerationStats:
+    """Statistics for model generation"""
+    
+    total_duration: float = 0.0
+    load_duration: float = 0.0
+    prompt_eval_count: int = 0
+    prompt_eval_duration: float = 0.0
+    eval_count: int = 0
+    eval_duration: float = 0.0
+    
+    @property
+    def prompt_eval_rate(self) -> float:
+        """Calculate prompt evaluation rate (tokens/s)"""
+        if self.prompt_eval_duration > 0:
+            return self.prompt_eval_count / self.prompt_eval_duration
+        return 0.0
+    
+    @property
+    def eval_rate(self) -> float:
+        """Calculate evaluation rate (tokens/s)"""
+        if self.eval_duration > 0:
+            return self.eval_count / self.eval_duration
+        return 0.0
+    
+    def format_ollama_style(self) -> str:
+        """Format stats in ollama style"""
+        return f"""total duration:       {self.total_duration:.9f}s
+load duration:        {self.load_duration * 1000:.6f}ms
+prompt eval count:    {self.prompt_eval_count} token(s)
+prompt eval duration: {self.prompt_eval_duration:.9f}s
+prompt eval rate:     {self.prompt_eval_rate:.2f} tokens/s
+eval count:           {self.eval_count} token(s)
+eval duration:        {self.eval_duration:.9f}s
+eval rate:            {self.eval_rate:.2f} tokens/s"""
+
+
+def check_model_cached(model_name: str) -> bool:
+    """Check if model is cached locally in HuggingFace cache"""
+    cache_dir = Path.home() / ".cache" / "huggingface" / "hub"
+    
+    # Convert model name to expected cache format
+    # mlx-community/Qwen3-30B-A3B-4bit -> models--mlx-community--Qwen3-30B-A3B-4bit
+    cache_model_name = "models--" + model_name.replace("/", "--")
+    model_cache_path = cache_dir / cache_model_name
+    
+    return model_cache_path.exists() and any(model_cache_path.iterdir())
 
 
 @dataclass
@@ -68,11 +120,21 @@ class MLXModel:
         self.model = None
         self.tokenizer = None
         self.conversation_history: List[Dict[str, str]] = []
+        self.load_duration = 0.0  # Track model load time
         
     def load_model(self) -> None:
         """Load the MLX model and tokenizer"""
         print(f"Loading model: {self.config.model_name}")
-        print("This may take a few minutes on first run...")
+        
+        # Check if model is cached
+        is_cached = check_model_cached(self.config.model_name)
+        if is_cached:
+            print("Model found in local cache")
+        else:
+            print("Model not found in local cache - downloading...")
+            print("This may take several minutes depending on model size and connection speed...")
+        
+        load_start = time.time()
         
         try:
             # Load model with proper tokenizer config for Qwen
@@ -83,7 +145,9 @@ class MLXModel:
                     "trust_remote_code": True
                 }
             )
-            print(f"Model loaded successfully!")
+            self.load_duration = time.time() - load_start
+            
+            print(f"Model loaded successfully! (took {self.load_duration:.2f}s)")
             print(f"Max output: {self.config.max_tokens} tokens")
             print(f"Note: Advanced parameters (temperature, top_p) not yet implemented")
             print()
@@ -131,13 +195,20 @@ class MLXModel:
                 add_generation_prompt=True
             )
     
-    def generate_response(self, prompt: str) -> str:
-        """Generate a response for the given prompt"""
+    def generate_response(self, prompt: str) -> Tuple[str, GenerationStats]:
+        """Generate a response for the given prompt and return stats"""
+        generation_start = time.time()
+        
         # Add user message to history
         self.add_to_history("user", prompt)
         
-        # Format messages
+        # Format messages and track prompt evaluation
+        prompt_eval_start = time.time()
         formatted_prompt = self.format_messages()
+        
+        # Count prompt tokens
+        prompt_tokens = self.tokenizer.encode(formatted_prompt)
+        prompt_eval_duration = time.time() - prompt_eval_start
         
         # Generate response using stream_generate with real-time output
         full_response = ""
@@ -146,6 +217,9 @@ class MLXModel:
         thinking_content = ""
         actual_response = ""
         thinking_truncated = False
+        output_tokens = 0
+        
+        eval_start = time.time()
         
         # Use stream_generate which supports max_tokens
         for response in stream_generate(
@@ -156,6 +230,7 @@ class MLXModel:
         ):
             if response.text:
                 full_response += response.text
+                output_tokens += 1  # Approximate token count
                 
                 # Track thinking state
                 if "<think>" in response.text and self.config.enable_thinking:
@@ -186,6 +261,9 @@ class MLXModel:
                     actual_response += response.text
                     print(response.text, end="", flush=True)
         
+        eval_duration = time.time() - eval_start
+        total_duration = time.time() - generation_start
+        
         # Print newline after generation completes
         print()
         
@@ -207,7 +285,17 @@ class MLXModel:
         # Add assistant response to history (without thinking)
         self.add_to_history("assistant", clean_response)
         
-        return clean_response
+        # Create generation stats
+        stats = GenerationStats(
+            total_duration=total_duration,
+            load_duration=self.load_duration,
+            prompt_eval_count=len(prompt_tokens),
+            prompt_eval_duration=prompt_eval_duration,
+            eval_count=output_tokens,
+            eval_duration=eval_duration
+        )
+        
+        return clean_response, stats
 
 
 class ChatInterface:
@@ -231,8 +319,7 @@ class ChatInterface:
         print("\nAvailable commands:")
         print("  help     - Show this help message")
         print("  clear    - Clear conversation history")
-        print("  quit     - Exit the chat")
-        print("  exit     - Exit the chat")
+        print("  quit, exit, /q, /quit, /exit - Exit the chat")
         print("  info     - Show model information")
         print()
     
@@ -240,7 +327,7 @@ class ChatInterface:
         """Process special commands. Returns True if command was processed."""
         command = command.lower().strip()
         
-        if command in ["quit", "exit"]:
+        if command in ["quit", "exit", "/q", "/quit", "/exit"]:
             self.running = False
             return True
         elif command == "help":
@@ -256,6 +343,7 @@ class ChatInterface:
             print(f"Temperature: {self.model_wrapper.config.temperature} (not yet implemented)")
             print(f"Top-p: {self.model_wrapper.config.top_p} (not yet implemented)")
             print(f"Context size: {self.model_wrapper.config.max_kv_size} tokens (not yet implemented)")
+            print(f"Verbose stats: {'Enabled' if self.model_wrapper.config.verbose else 'Disabled'}")
             print(f"Thinking mode: {'Enabled' if self.model_wrapper.config.enable_thinking else 'Disabled'}")
             if self.model_wrapper.config.enable_thinking:
                 print(f"Thinking budget: {self.model_wrapper.config.thinking_budget} tokens")
@@ -290,9 +378,11 @@ class ChatInterface:
                 print("\nAssistant: ", end="", flush=True)
                 
                 # The response will be streamed directly in generate_response
-                response = self.model_wrapper.generate_response(user_input)
+                response, stats = self.model_wrapper.generate_response(user_input)
                 
-                # Response is already printed via streaming, no need to print again
+                # Show stats if verbose mode is enabled
+                if self.model_wrapper.config.verbose:
+                    print(f"\n{stats.format_ollama_style()}")
                 
             except KeyboardInterrupt:
                 print("\n\nInterrupted. Type 'quit' to exit.")
@@ -354,11 +444,17 @@ def parse_arguments() -> argparse.Namespace:
     )
     
     parser.add_argument(
+        "--verbose",
+        action="store_true",
+        default=False,
+        help="Show detailed timing and token statistics after each response (ollama-style)"
+    )
+    
+    parser.add_argument(
         "--quiet",
         dest="verbose",
         action="store_false",
-        default=True,
-        help="Disable verbose output during generation"
+        help="Disable verbose output (opposite of --verbose)"
     )
     
     # These parameters are kept for future implementation
