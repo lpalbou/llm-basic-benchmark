@@ -1,6 +1,6 @@
 # Open Source Language Model Benchmark
 
-A comprehensive evaluation of 44 open source language models across four distinct tasks: creative writing, logical reasoning, counterfactual causality, and programming. This benchmark aims to provide practical insights into current open source LLM capabilities and performance characteristics.
+An evaluation of 43 open source language models across four distinct tasks: creative writing, logical reasoning, counterfactual causality, and programming. This benchmark aims to provide practical insights into current open source LLM capabilities and performance characteristics.
 
 ## Overview
 
